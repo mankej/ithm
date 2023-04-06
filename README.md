@@ -37,7 +37,7 @@ To set it up, follow these steps:
 > file -> settings -> tools -> terminal -> environment variables -> 
 > click list icon on input or click input and shift + enter -> click + icon(add) 
 
-> ITHM_PROJECT_ROOT = $PROJECT_DIR$ - special IntelliJ's variable pointing to project root
+> ITHM_PROJECT_ROOT = `$PROJECT_DIR$` - special IntelliJ's variable pointing to project root
 
 > after setting env you need to restart IDE or only new terminals will start with enabled ITHM.
 
