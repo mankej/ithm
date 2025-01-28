@@ -41,6 +41,17 @@ To set it up, follow these steps:
 
 > after setting env you need to restart IDE or only new terminals will start with enabled ITHM.
 
+Since IntelliJ made changes to the naming of history files, using this script has sometimes been 'hard,' especially when running multiple instances simultaneously. 
+Now, the history file name in IntelliJ can be a 'randomly' generated number instead of being sequentially generated. 
+Additionally, the history file is no longer permanently linked to the console tab. 
+Instead, each console initialization generates a new file name. 
+I tested several options to address the problem and settled on a solution that feels best, though it’s not perfect.
+
+I added a shared file sequence generation mechanism, which allows history files to be loaded in a more predictable way. 
+Additionally, to address accidental tab closures, there is now a mechanism to save the ID of the last closed tab, so it will be restored upon reopening.
+To 'permanently' close a tab (without saving its ID), you must call ithm_not_restore in the desired console. 
+You can also override the sequence using ithm_set_seq [NUMBER].
+To use this script in the old way, relying on IntelliJ's history file name generation, define the environment variable `ITHM_USE_INTELLIJ_HISTFILE_NAME=1`.
 
 ## OTHER CONFIG ENVS
 #### ITHM_GLOBAL_HISTORY_FILE
@@ -74,6 +85,10 @@ setting to file path enables appending current IDE session history to this file 
 > **default**: disabled
 #### ITHM_SAVE_HISTORY_ON_CLOSE_AND_RESET_HISTFILE
 setting to 1 enables saving history and restoring `HISTFILE` to value from `ITHM_GLOBAL_HISTORY_FILE`
+> **default**: disabled
+> 
+#### ITHM_USE_INTELLIJ_HISTFILE_NAME
+setting to 1 makes the script rely on IntelliJ's history file name generation.
 > **default**: disabled
 
 ## IN TERMINAL FUNCTIONS
@@ -112,3 +127,7 @@ restore current project history file from chosen backup file.
 #### ithm_open $DEST=intellij(optional)
 opens directory where current history file is stored using command set in `ITHM_DIRECTORY_BROWSER`.
 You can use "intellij" keyword to open directory where native history files are stored.
+#### ithm_set_seq $NUMBER
+overrides the current sequence state with the given number, useful if you want to reset your console tabs.
+#### ithm_not_restore
+stops the restore mechanism, allowing the current console to be 'permanently' closed.

@@ -6,7 +6,37 @@ if [ -n "$__INTELLIJ_COMMAND_HISTFILE__" ] && [ -n "$ITHM_PROJECT_ROOT" ]; then
 
         PROMPT_COMMAND="history -n; history -a; history -w; $PROMPT_COMMAND"
     fi
-    ITHM_HISTORY_FILE_NAME=$(echo "$__INTELLIJ_COMMAND_HISTFILE__" | grep -Eoh "([^/]+?)$" | rev | cut -d '-' -f 1 | rev)
+    ITHM_UNIQ_STARTUP_ID=${GIO_LAUNCHED_DESKTOP_FILE_PID}
+    ITHM_HISTORY_FILE_PATH=${ITHM_HISTORY_FILE_PATH:=$ITHM_PROJECT_ROOT/.idea/terminal/history/}
+    ITHM_ID_FILE=$ITHM_HISTORY_FILE_PATH/ithm_startup
+    ITHM_CLOSED_ID_FILE=$ITHM_HISTORY_FILE_PATH/ithm_closed
+    touch $ITHM_ID_FILE
+    touch $ITHM_CLOSED_ID_FILE
+    ITHM_RESTORE_CLOSED=true
+    ITHM_STARTUP_DATA=$(< $ITHM_ID_FILE)
+    ITHM_LAST_CLOSED_ID=$(head -n 1 $ITHM_CLOSED_ID_FILE)
+    ITHM_LOAD_ID=1;
+    if [ -n "$ITHM_STARTUP_DATA" ]; then
+    ITHM_LAST_UNIQ_STARTUP_ID=$(echo $ITHM_STARTUP_DATA | cut -d ':' -f 1)
+    if [ "$ITHM_UNIQ_STARTUP_ID" = "$ITHM_LAST_UNIQ_STARTUP_ID" ]; then
+      if [ -n "$ITHM_LAST_CLOSED_ID" ]; then
+        ITHM_LOAD_ID=$ITHM_LAST_CLOSED_ID
+      else
+        ITHM_LOAD_ID=$(echo $ITHM_STARTUP_DATA | cut -d ':' -f 2)
+        ITHM_LOAD_ID=$((ITHM_LOAD_ID+1))
+      fi
+    fi
+    fi
+    if [ -z "$ITHM_LAST_CLOSED_ID" ]; then
+    echo "$ITHM_UNIQ_STARTUP_ID:$ITHM_LOAD_ID" > $ITHM_ID_FILE
+    else
+    sed -i '1d' $ITHM_CLOSED_ID_FILE
+    fi
+    trap "__ithm_catch_closed_id" EXIT
+    ITHM_HISTORY_FILE_NAME="history$ITHM_LOAD_ID"
+    if [ -n "$ITHM_USE_INTELLIJ_HISTFILE_NAME" ]; then
+        ITHM_HISTORY_FILE_NAME=$(echo $__INTELLIJ_COMMAND_HISTFILE__ | grep -Eoh "([^/]+?)$" | rev | cut -d '-' -f 1 | rev)
+    fi
     PROMPT_COMMAND="echo -n [$ITHM_HISTORY_FILE_NAME]; $PROMPT_COMMAND"
     INTELLIJ_ORIGINAL_PATH=$__INTELLIJ_COMMAND_HISTFILE__
     unset __INTELLIJ_COMMAND_HISTFILE__
@@ -14,7 +44,6 @@ if [ -n "$__INTELLIJ_COMMAND_HISTFILE__" ] && [ -n "$ITHM_PROJECT_ROOT" ]; then
     ITHM_DIRECTORY_BROWSER=${ITHM_DIRECTORY_BROWSER:=xdg-open}
     ITHM_FILE_EDITOR=${ITHM_FILE_EDITOR:=nano}
     ITHM_FILE_READER=${ITHM_FILE_READER:=less}
-    ITHM_HISTORY_FILE_PATH=${ITHM_HISTORY_FILE_PATH:=$ITHM_PROJECT_ROOT/.idea/terminal/history/}
     ITHM_HISTORY_FILE="$ITHM_HISTORY_FILE_PATH$ITHM_HISTORY_FILE_NAME"
     alias ithm_current='echo $ITHM_HISTORY_FILE_NAME'
     alias ithm_directory='echo $ITHM_HISTORY_FILE_PATH'
@@ -31,6 +60,17 @@ if [ -n "$__INTELLIJ_COMMAND_HISTFILE__" ] && [ -n "$ITHM_PROJECT_ROOT" ]; then
     if [ -n "$ITHM_SAVE_HISTORY_ON_CLOSE_AND_RESET_HISTFILE" ]; then
         trap "$(builtin printf 'history -w %q; HISTFILE=%q' "$ITHM_HISTORY_FILE_NAME" "$ITHM_GLOBAL_HISTORY_FILE")" EXIT
     fi
+    ithm_set_seq(){
+        echo "$ITHM_UNIQ_STARTUP_ID:$1" > $ITHM_ID_FILE
+    }
+    ithm_not_restore(){
+        ITHM_RESTORE_CLOSED=false
+    }
+    __ithm_catch_closed_id(){
+        if [ "$ITHM_RESTORE_CLOSED" = true ]; then
+          echo "$ITHM_LOAD_ID" >> $ITHM_CLOSED_ID_FILE
+        fi
+    }
     ithm_clone() {
         if [ -n "$1" ] && [ -f "$ITHM_HISTORY_FILE_PATH$1" ] && [ "$1" != "$ITHM_HISTORY_FILE_NAME" ]; then
             while true; do
